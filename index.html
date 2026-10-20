@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel do Calendário</title>
+  
+  <!-- CSS do FullCalendar (Versão 3 - Leve para navegadores antigos) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.css" />
+  
+  <style>
+    body {
+      background-color: #121212;
+      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 15px;
+    }
+    #calendar {
+      max-width: 100%;
+      margin: 0 auto;
+    }
+    /* Estilização para o FullCalendar no modo escuro */
+    .fc-toolbar h2 {
+      color: #ffffff;
+      font-size: 1.5em;
+    }
+    .fc-view-container {
+      background-color: #1e1e1e;
+      border-radius: 8px;
+    }
+    .fc-day-number {
+      color: #e0e0e0;
+      font-size: 1.1em;
+      padding: 4px !important;
+    }
+    .fc-day-header {
+      background-color: #2c2c2c;
+      color: #ffffff;
+      padding: 8px 0 !important;
+    }
+    .fc-today {
+      background: #333333 !important;
+    }
+    .fc-event {
+      border: none;
+      padding: 2px 4px;
+      font-size: 0.9em;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="calendar"></div>
+
+  <!-- Scripts necessários (jQuery, Moment.js, FullCalendar e ICAL parser) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ical.js/1.4.0/ical.min.js"></script>
+
+  <script>
+    // ============================================================
+    // SEUS CALENDÁRIOS AQUI:
+    // Cole os links iCal (.ics) do Google e defina as cores
+    // ============================================================
+    var minhasAgendas = [
+      {
+        url: 'COLE_AQUI_O_PRIMEIRO_LINK_ICAL.ics',
+        color: '#3788d8' // Cor Azul
+      },
+      {
+        url: 'COLE_AQUI_O_SEGUNDO_LINK_ICAL.ics',
+        color: '#28a745' // Cor Verde
+      },
+      {
+        url: 'COLE_AQUI_O_TERCEIRO_LINK_ICAL.ics',
+        color: '#dc3545' // Cor Vermelha
+      }
+    ];
+
+    // Função para carregar e interpretar os feeds ICS do Google Agenda
+    function carregarEventosICS(fetchInfo, successCallback, failureCallback) {
+      var eventosTotais = [];
+      var promessas = [];
+
+      minhasAgendas.forEach(function(agenda) {
+        if (!agenda.url || agenda.url.indexOf('COLE_AQUI') !== -1) return;
+
+        // Usa um proxy CORS gratuito para permitir leitura direta no browser
+        var proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(agenda.url);
+
+        var p = $.ajax({
+          url: proxyUrl,
+          dataType: 'text'
+        }).then(function(data) {
+          try {
+            var jcalData = ICAL.parse(data);
+            var comp = new ICAL.Component(jcalData);
+            var vevents = comp.getAllSubcomponents('vevent');
+
+            vevents.forEach(function(vevent) {
+              var event = new ICAL.Event(vevent);
+              eventosTotais.push({
+                title: event.summary,
+                start: event.startDate.toJSDate(),
+                end: event.endDate ? event.endDate.toJSDate() : null,
+                color: agenda.color
+              });
+            });
+          } catch (e) {
+            console.error('Erro ao processar agenda:', e);
+          }
+        });
+
+        promessas.push(p);
+      });
+
+      $.when.apply($, promessas).always(function() {
+        successCallback(eventosTotais);
+      });
+    }
+
+    // Inicialização do FullCalendar
+    $(document).ready(function() {
+      $('#calendar').fullCalendar({
+        header: {
+          left: 'prev,next today',
+          center: 'title',
+          right: 'month,agendaWeek,listMonth'
+        },
+        defaultView: 'month',
+        editable: false,
+        events: carregarEventosICS,
+        height: 'parent'
+      });
+    });
+  </script>
+</body>
+</html>
